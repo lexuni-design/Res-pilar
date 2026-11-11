@@ -34,16 +34,17 @@
       font-weight: bold; 
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       cursor: pointer;
+      z-index: 999;
     }
   </style>
 </head>
 <body>
 
-  <!-- Reemplazá 'animal.glb' si tu archivo tiene otro nombre -->
   <model-viewer 
-    src="./comadreja.glb" 
+    src="https://lexuni-design.github.io/Res-pilar/comadreja.glb" 
     ar 
-    ar-modes="scene-viewer webxr quick-look" 
+    ar-modes="webxr scene-viewer quick-look" 
+    ar-scale="auto"
     camera-controls 
     tone-mapping="neutral" 
     shadow-intensity="1">

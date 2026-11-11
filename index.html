@@ -91,12 +91,19 @@
   </button>
 
   <script>
+    // Catálogo con comadreja y la lechuza apuntando a lechu.glb
     const catalogo = {
       "comadreja": {
         nombre: "Comadreja overa",
         glb: "https://lexuni-design.github.io/Res-pilar/comadreja.glb",
         usdz: "https://lexuni-design.github.io/Res-pilar/comadreja.usdz"
       },
+      "lechuza": {
+        nombre: "Lechuza de campanario",
+        glb: "https://lexuni-design.github.io/Res-pilar/lechu.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/lechu.usdz"
+      },
+      // Dejamos también 'campanario' como alias por si ya armaste un QR con ese nombre
       "campanario": {
         nombre: "Lechuza de campanario",
         glb: "https://lexuni-design.github.io/Res-pilar/lechu.glb",
@@ -121,26 +128,23 @@
     cartel.textContent = item.nombre;
     document.title = `${item.nombre} - Realidad Aumentada`;
 
-    // Mostrar aviso de carga
     estado.style.display = 'block';
     estado.textContent = 'Descargando modelo 3D...';
 
     visor.src = item.glb;
     visor.setAttribute('ios-src', item.usdz);
 
-    // Eventos para detectar si cargó bien o si falló
     visor.addEventListener('load', () => {
-      estado.style.display = 'none'; // Cargó con éxito
+      estado.style.display = 'none';
     });
 
     visor.addEventListener('error', (detalle) => {
       estado.style.display = 'block';
       estado.style.backgroundColor = '#d32f2f';
-      estado.textContent = 'Error: no se pudo encontrar o cargar el archivo .glb';
+      estado.textContent = 'Error: no se pudo cargar el archivo lechu.glb';
       console.error('Error al cargar GLB:', detalle);
     });
 
-    // Disparador AR
     boton.addEventListener('click', () => {
       if (visor.canActivateAR) {
         visor.activateAR();

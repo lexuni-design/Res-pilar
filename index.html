@@ -1,143 +1,68 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title id="titulo-web">Modelos en Realidad Aumentada</title>
-  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-  <style>
-    body, html { 
-      margin: 0; 
-      padding: 0; 
-      width: 100%; 
-      height: 100%; 
-      overflow: hidden; 
-      font-family: Arial, sans-serif; 
+<script>
+  const catalogo = {
+    "comadreja": {
+      nombre: "Comadreja overa",
+      glb: "https://lexuni-design.github.io/Res-pilar/comadreja.glb"
+    },
+    "lechu": {
+      nombre: "Lechuza de campanario",
+      glb: "https://lexuni-design.github.io/Res-pilar/lechu.glb"
+    },
+    "lechuza": {
+      nombre: "Lechuza de campanario",
+      glb: "https://lexuni-design.github.io/Res-pilar/lechu.glb"
     }
-    model-viewer { 
-      width: 100%; 
-      height: 100%; 
-      background-color: #ededed; 
-    }
-    
-    #cartel-nombre {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: rgba(255, 255, 255, 0.95);
-      padding: 10px 24px;
-      border-radius: 24px;
-      font-size: 18px;
-      font-weight: bold;
-      color: #1b5e20;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      z-index: 1000;
-      white-space: nowrap;
-    }
+  };
 
-    #cartel-estado {
-      position: fixed;
-      top: 70px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: rgba(0, 0, 0, 0.7);
-      color: #fff;
-      padding: 6px 14px;
-      border-radius: 12px;
-      font-size: 13px;
-      z-index: 1000;
-      display: none;
-    }
+  // Leer parámetros de la URL sin importar mayúsculas/minúsculas ni espacios
+  const params = new URLSearchParams(window.location.search);
+  let rawParam = params.get('objeto') || params.get('animal');
+  let idSeleccionado = rawParam ? rawParam.trim().toLowerCase() : null;
 
-    #btn-ar-custom {
-      position: fixed; 
-      bottom: 30px; 
-      left: 50%; 
-      transform: translateX(-50%);
-      padding: 16px 28px; 
-      background-color: #1b5e20; 
-      color: #ffffff; 
-      border: none;
-      border-radius: 30px; 
-      font-size: 16px; 
-      font-weight: bold; 
-      box-shadow: 0 4px 14px rgba(0,0,0,0.35);
-      cursor: pointer;
-      z-index: 10000;
-    }
-    #btn-ar-custom:active {
-      background-color: #0d3810;
-    }
-  </style>
-</head>
-<body>
+  // Si no coincide con nada, recién ahí va comadreja
+  if (!idSeleccionado || !catalogo[idSeleccionado]) {
+    console.warn("Parámetro no reconocido o ausente:", rawParam);
+    idSeleccionado = "comadreja";
+  }
 
-  <div id="cartel-nombre">Cargando...</div>
-  <div id="cartel-estado">Descargando modelo 3D...</div>
+  const item = catalogo[idSeleccionado];
 
-  <model-viewer 
-    id="visor-modelo"
-    ar 
-    ar-modes="webxr scene-viewer" 
-    ar-scale="auto"
-    camera-controls 
-    tone-mapping="neutral" 
-    shadow-intensity="1">
-  </model-viewer>
+  const visor = document.getElementById('visor-modelo');
+  const cartel = document.getElementById('cartel-nombre');
+  const estado = document.getElementById('cartel-estado');
+  const boton = document.getElementById('btn-ar-custom');
 
-  <button id="btn-ar-custom">
-    📷 Ver en tu espacio y sacar foto
-  </button>
+  // Actualizar textos
+  cartel.textContent = item.nombre;
+  document.title = `${item.nombre} - Realidad Aumentada`;
 
-  <script>
-    const catalogo = {
-      "comadreja": {
-        nombre: "Comadreja overa",
-        glb: "https://lexuni-design.github.io/Res-pilar/comadreja.glb"
-      },
-      "lechu": {
-        nombre: "Lechuza de campanario",
-        glb: "https://lexuni-design.github.io/Res-pilar/lechu.glb"
-      },
-      "lechuza": {
-        nombre: "Lechuza de campanario",
-        glb: "https://lexuni-design.github.io/Res-pilar/lechu.glb"
-      }
-    };
+  estado.style.display = 'block';
+  estado.textContent = `Descargando ${item.nombre}...`;
 
-    const params = new URLSearchParams(window.location.search);
-    let idSeleccionado = params.get('objeto') || params.get('animal');
+  // Asignar el modelo
+  visor.src = item.glb;
 
-    if (!idSeleccionado || !catalogo[idSeleccionado]) {
-      idSeleccionado = "comadreja";
-    }
+  visor.addEventListener('load', () => {
+    estado.style.display = 'none';
+  });
 
-    const item = catalogo[idSeleccionado];
-
-    const visor = document.getElementById('visor-modelo');
-    const cartel = document.getElementById('cartel-nombre');
-    const estado = document.getElementById('cartel-estado');
-    const boton = document.getElementById('btn-ar-custom');
-
-    cartel.textContent = item.nombre;
-    document.title = `${item.nombre} - Realidad Aumentada`;
-
+  visor.addEventListener('error', (detalle) => {
     estado.style.display = 'block';
-    estado.textContent = 'Descargando modelo 3D...';
+    estado.style.backgroundColor = '#d32f2f';
+    estado.textContent = `Error: no se pudo cargar ${item.glb.split('/').pop()}`;
+    console.error('Error al cargar GLB:', detalle);
+  });
 
-    visor.src = item.glb;
+  boton.addEventListener('click', () => {
+    if (visor.canActivateAR) {
+      visor.activateAR();
+      return;
+    }
 
-    visor.addEventListener('load', () => {
-      estado.style.display = 'none';
-    });
-
-    visor.addEventListener('error', (detalle) => {
-      estado.style.display = 'block';
-      estado.style.backgroundColor = '#d32f2f';
-      estado.textContent = `Error: no se pudo cargar ${item.glb.split('/').pop()}`;
-      console.error('Error al cargar GLB:', detalle);
-    });
-
-    boton.addEventListener('click', () => {
-      if
+    const glbUrl = encodeURIComponent(item.glb);
+    const title = encodeURIComponent(item.nombre);
+    const fallbackUrl = encodeURIComponent(window.location.href);
+    
+    window.location.href = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_preferred&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
+  });
+</script>

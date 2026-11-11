@@ -20,7 +20,6 @@
       background-color: #ededed; 
     }
 
-    /* Botón para iniciar la cámara */
     #btn-ar-custom {
       position: fixed; 
       bottom: 30px; 
@@ -38,7 +37,7 @@
       z-index: 10000;
     }
 
-    /* Disparador estilo obturador fotográfico */
+    /* Botón disparador visible solo en WebXR */
     #btn-captura {
       display: none;
       position: fixed;
@@ -52,8 +51,7 @@
       border-radius: 50%;
       box-shadow: 0 4px 16px rgba(0,0,0,0.45);
       cursor: pointer;
-      z-index: 10001;
-      outline: none;
+      z-index: 2147483647; /* Máxima prioridad sobre la vista de cámara */
     }
 
     #btn-captura:active {
@@ -61,7 +59,6 @@
       background-color: #dcdcdc;
     }
 
-    /* Efecto visual de flash fotográfico */
     #flash-overlay {
       position: fixed;
       top: 0;
@@ -71,7 +68,7 @@
       background-color: #ffffff;
       opacity: 0;
       pointer-events: none;
-      z-index: 20000;
+      z-index: 2147483647;
       transition: opacity 0.08s ease-out;
     }
 
@@ -82,22 +79,23 @@
 </head>
 <body>
 
-  <!-- Capa del destello de flash -->
   <div id="flash-overlay"></div>
 
-  <!-- Visor 3D / AR -->
+  <!-- ar-modes configurado para intentar WebXR sin saltar a Scene Viewer a menos que falle -->
   <model-viewer 
     id="visor-animal"
     src="https://lexuni-design.github.io/Res-pilar/comadreja.glb" 
     ar 
-    ar-modes="webxr scene-viewer quick-look" 
+    ar-modes="webxr scene-viewer" 
     ar-scale="auto"
     camera-controls 
     tone-mapping="neutral" 
     shadow-intensity="1">
+    
+    <!-- El botón de disparo colocado como slot nativo dentro de model-viewer para WebXR DOM Overlay -->
+    <button slot="ar-button" style="display:none;"></button>
   </model-viewer>
 
-  <!-- Botones -->
   <button id="btn-ar-custom">
     📷 Ver en tu patio
   </button>
@@ -110,7 +108,6 @@
     const btnCaptura = document.getElementById('btn-captura');
     const flash = document.getElementById('flash-overlay');
 
-    // Inicializar el contexto de audio
     let audioCtx = null;
 
     function reproducirSonidoObturador() {
@@ -121,71 +118,64 @@
         audioCtx.resume();
       }
 
-      const tiempo = audioCtx.currentTime;
+      const t = audioCtx.currentTime;
 
-      // 1. Ruido blanco para emular el golpe mecánico del espejo/cortina
+      // Golpe mecánico
       const bufferSize = audioCtx.sampleRate * 0.04;
       const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1;
-      }
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
 
       const noise = audioCtx.createBufferSource();
       noise.buffer = buffer;
 
-      const noiseFilter = audioCtx.createBiquadFilter();
-      noiseFilter.type = 'bandpass';
-      noiseFilter.frequency.setValueAtTime(1400, tiempo);
-      noiseFilter.Q.setValueAtTime(3, tiempo);
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1400, t);
+      filter.Q.setValueAtTime(3, t);
 
-      const noiseGain = audioCtx.createGain();
-      noiseGain.gain.setValueAtTime(0.8, tiempo);
-      noiseGain.gain.exponentialRampToValueAtTime(0.01, tiempo + 0.04);
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.8, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.04);
 
-      noise.connect(noiseFilter);
-      noiseFilter.connect(noiseGain);
-      noiseGain.connect(audioCtx.destination);
-      noise.start(tiempo);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+      noise.start(t);
 
-      // 2. Tono percusivo metálico secundario del clic
+      // Clic metálico
       const osc = audioCtx.createOscillator();
       const oscGain = audioCtx.createGain();
-
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(320, tiempo);
-      osc.frequency.exponentialRampToValueAtTime(80, tiempo + 0.06);
-
-      oscGain.gain.setValueAtTime(0.6, tiempo);
-      oscGain.gain.exponentialRampToValueAtTime(0.01, tiempo + 0.06);
+      osc.frequency.setValueAtTime(320, t);
+      osc.frequency.exponentialRampToValueAtTime(80, t + 0.06);
+      oscGain.gain.setValueAtTime(0.6, t);
+      oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.06);
 
       osc.connect(oscGain);
       oscGain.connect(audioCtx.destination);
-      osc.start(tiempo);
-      osc.stop(tiempo + 0.06);
+      osc.start(t);
+      osc.stop(t + 0.06);
     }
 
-    // 1. Abrir Realidad Aumentada
     btnAr.addEventListener('click', async () => {
-      // Activa el contexto de audio con la primera interacción del usuario
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       }
-      
+
+      // Intentamos abrir WebXR directamente a través del visor
       if (visor.canActivateAR) {
         visor.activateAR();
       } else {
+        // Fallback a Scene Viewer si el celular no tiene WebXR disponible
         const glbUrl = encodeURIComponent("https://lexuni-design.github.io/Res-pilar/comadreja.glb");
         const title = encodeURIComponent("Comadreja");
         const fallbackUrl = encodeURIComponent(window.location.href);
-        
-        const sceneViewerIntent = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_only&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
-        
-        window.location.href = sceneViewerIntent;
+        window.location.href = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_only&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
       }
     });
 
-    // 2. Alternar visibilidad de botones según el estado de AR
+    // Detectar entrada y salida de WebXR
     visor.addEventListener('ar-status', (event) => {
       if (event.detail.status === 'session-started') {
         btnAr.style.display = 'none';
@@ -196,36 +186,28 @@
       }
     });
 
-    // 3. Captura con sonido, destello háptico y descarga
     btnCaptura.addEventListener('click', async () => {
-      // Efectos inmediatos al presionar
       reproducirSonidoObturador();
 
-      // Vibración de cámara en Android (si el dispositivo lo soporta)
       if (navigator.vibrate) {
         navigator.vibrate(35);
       }
 
-      // Animación de flash
       flash.classList.add('disparar-flash');
-      setTimeout(() => {
-        flash.classList.remove('disparar-flash');
-      }, 90);
+      setTimeout(() => flash.classList.remove('disparar-flash'), 90);
 
-      // Captura y descarga del fotograma
       try {
         const blob = await visor.toBlob({ idealAspect: true });
         const url = URL.createObjectURL(blob);
-        
         const a = document.createElement('a');
         a.href = url;
-        a.download = `comadreja-ar-${Date.now()}.png`;
+        a.download = `comadreja-${Date.now()}.png`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       } catch (err) {
-        console.error('Error al capturar la imagen:', err);
+        console.error(err);
       }
     });
   </script>

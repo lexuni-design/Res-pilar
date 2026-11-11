@@ -19,7 +19,8 @@
       height: 100%; 
       background-color: #ededed; 
     }
-    /* Botón flotante independiente de model-viewer */
+
+    /* Botón para iniciar la cámara */
     #btn-ar-custom {
       position: fixed; 
       bottom: 30px; 
@@ -35,16 +36,33 @@
       box-shadow: 0 4px 14px rgba(0,0,0,0.35);
       cursor: pointer;
       z-index: 10000;
-      display: block;
     }
-    #btn-ar-custom:active {
-      background-color: #0d3810;
+
+    /* Botón obturador de cámara (estilo disparador circular) */
+    #btn-captura {
+      display: none; /* Se activa solo cuando la cámara está funcionando */
+      position: fixed;
+      bottom: 35px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 70px;
+      height: 70px;
+      background-color: #ffffff;
+      border: 5px solid #1b5e20;
+      border-radius: 50%;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      cursor: pointer;
+      z-index: 10001;
+    }
+
+    #btn-captura:active {
+      transform: translateX(-50%) scale(0.92);
+      background-color: #e0e0e0;
     }
   </style>
 </head>
 <body>
 
-  <!-- Visor 3D -->
   <model-viewer 
     id="visor-animal"
     src="https://lexuni-design.github.io/Res-pilar/comadreja.glb" 
@@ -56,21 +74,24 @@
     shadow-intensity="1">
   </model-viewer>
 
-  <!-- Botón exterior -->
+  <!-- Botón 1: Iniciar AR -->
   <button id="btn-ar-custom">
-    📷 Ver en tu patio y sacar foto
+    📷 Ver en tu patio
   </button>
+
+  <!-- Botón 2: Disparador de foto -->
+  <button id="btn-captura" title="Sacar foto"></button>
 
   <script>
     const visor = document.getElementById('visor-animal');
-    const boton = document.getElementById('btn-ar-custom');
+    const btnAr = document.getElementById('btn-ar-custom');
+    const btnCaptura = document.getElementById('btn-captura');
 
-    boton.addEventListener('click', async () => {
-      // 1. Intento principal a través del componente
+    // 1. Abrir Realidad Aumentada
+    btnAr.addEventListener('click', async () => {
       if (visor.canActivateAR) {
         visor.activateAR();
       } else {
-        // 2. Si el navegador no reporta soporte WebXR, forzamos Scene Viewer nativo directo
         const glbUrl = encodeURIComponent("https://lexuni-design.github.io/Res-pilar/comadreja.glb");
         const title = encodeURIComponent("Comadreja");
         const fallbackUrl = encodeURIComponent(window.location.href);
@@ -79,6 +100,33 @@
         
         window.location.href = sceneViewerIntent;
       }
+    });
+
+    // 2. Detectar cuando la sesión de AR WebXR está activa en pantalla
+    visor.addEventListener('ar-status', (event) => {
+      if (event.detail.status === 'session-started') {
+        btnAr.style.display = 'none';
+        btnCaptura.style.display = 'block';
+      } else if (event.detail.status === 'not-presenting') {
+        btnAr.style.display = 'block';
+        btnCaptura.style.display = 'none';
+      }
+    });
+
+    // 3. Tomar la foto y descargarla
+    btnCaptura.addEventListener('click', async () => {
+      // Captura el lienzo actual en formato blob
+      const blob = await visor.toBlob({ idealAspect: true });
+      const url = URL.createObjectURL(blob);
+      
+      // Crea un enlace invisible para descargar la foto automáticamente
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `comadreja-ar-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     });
   </script>
 

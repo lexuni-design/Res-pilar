@@ -19,7 +19,6 @@
       height: 100%; 
       background-color: #ededed; 
     }
-
     #btn-ar-custom {
       position: fixed; 
       bottom: 30px; 
@@ -36,178 +35,58 @@
       cursor: pointer;
       z-index: 10000;
     }
-
-    /* Botón disparador visible solo en WebXR */
-    #btn-captura {
-      display: none;
-      position: fixed;
-      bottom: 35px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 74px;
-      height: 74px;
-      background-color: #ffffff;
-      border: 6px solid #1b5e20;
-      border-radius: 50%;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.45);
-      cursor: pointer;
-      z-index: 2147483647; /* Máxima prioridad sobre la vista de cámara */
-    }
-
-    #btn-captura:active {
-      transform: translateX(-50%) scale(0.9);
-      background-color: #dcdcdc;
-    }
-
-    #flash-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: #ffffff;
-      opacity: 0;
-      pointer-events: none;
-      z-index: 2147483647;
-      transition: opacity 0.08s ease-out;
-    }
-
-    .disparar-flash {
-      opacity: 0.85 !important;
+    #btn-ar-custom:active {
+      background-color: #0d3810;
     }
   </style>
 </head>
 <body>
 
-  <div id="flash-overlay"></div>
-
-  <!-- ar-modes configurado para intentar WebXR sin saltar a Scene Viewer a menos que falle -->
   <model-viewer 
     id="visor-animal"
     src="https://lexuni-design.github.io/Res-pilar/comadreja.glb" 
+    ios-src="https://lexuni-design.github.io/Res-pilar/comacheta.usdz"
     ar 
-    ar-modes="webxr scene-viewer" 
+    ar-modes="webxr scene-viewer quick-look" 
     ar-scale="auto"
     camera-controls 
     tone-mapping="neutral" 
     shadow-intensity="1">
-    
-    <!-- El botón de disparo colocado como slot nativo dentro de model-viewer para WebXR DOM Overlay -->
-    <button slot="ar-button" style="display:none;"></button>
   </model-viewer>
 
   <button id="btn-ar-custom">
-    📷 Ver en tu patio
+    📷 Ver en tu patio y sacar foto
   </button>
-
-  <button id="btn-captura" title="Disparar obturador"></button>
 
   <script>
     const visor = document.getElementById('visor-animal');
-    const btnAr = document.getElementById('btn-ar-custom');
-    const btnCaptura = document.getElementById('btn-captura');
-    const flash = document.getElementById('flash-overlay');
+    const boton = document.getElementById('btn-ar-custom');
 
-    let audioCtx = null;
-
-    function reproducirSonidoObturador() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-
-      const t = audioCtx.currentTime;
-
-      // Golpe mecánico
-      const bufferSize = audioCtx.sampleRate * 0.04;
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-
-      const noise = audioCtx.createBufferSource();
-      noise.buffer = buffer;
-
-      const filter = audioCtx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(1400, t);
-      filter.Q.setValueAtTime(3, t);
-
-      const gain = audioCtx.createGain();
-      gain.gain.setValueAtTime(0.8, t);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.04);
-
-      noise.connect(filter);
-      filter.connect(gain);
-      gain.connect(audioCtx.destination);
-      noise.start(t);
-
-      // Clic metálico
-      const osc = audioCtx.createOscillator();
-      const oscGain = audioCtx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(320, t);
-      osc.frequency.exponentialRampToValueAtTime(80, t + 0.06);
-      oscGain.gain.setValueAtTime(0.6, t);
-      oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.06);
-
-      osc.connect(oscGain);
-      oscGain.connect(audioCtx.destination);
-      osc.start(t);
-      osc.stop(t + 0.06);
-    }
-
-    btnAr.addEventListener('click', async () => {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-
-      // Intentamos abrir WebXR directamente a través del visor
+    boton.addEventListener('click', () => {
+      // 1. Si model-viewer puede activar AR directamente (funciona en iOS con quick-look si existe ios-src)
       if (visor.canActivateAR) {
         visor.activateAR();
+        return;
+      }
+
+      // 2. Fallback manual según sistema operativo
+      const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+      if (esIOS) {
+        // Enlace nativo directo para AR Quick Look en Safari / iOS
+        const usdzUrl = "https://lexuni-design.github.io/Res-pilar/comacheta.usdz";
+        const link = document.createElement('a');
+        link.setAttribute('rel', 'ar');
+        link.appendChild(document.createElement('img'));
+        link.setAttribute('href', usdzUrl);
+        link.click();
       } else {
-        // Fallback a Scene Viewer si el celular no tiene WebXR disponible
+        // Fallback nativo para Android (Scene Viewer)
         const glbUrl = encodeURIComponent("https://lexuni-design.github.io/Res-pilar/comadreja.glb");
-        const title = encodeURIComponent("Comadreja");
+        const title = encodeURIComponent("Comadreja overa - Reserva del Pilar");
         const fallbackUrl = encodeURIComponent(window.location.href);
-        window.location.href = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_only&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
-      }
-    });
-
-    // Detectar entrada y salida de WebXR
-    visor.addEventListener('ar-status', (event) => {
-      if (event.detail.status === 'session-started') {
-        btnAr.style.display = 'none';
-        btnCaptura.style.display = 'block';
-      } else if (event.detail.status === 'not-presenting') {
-        btnAr.style.display = 'block';
-        btnCaptura.style.display = 'none';
-      }
-    });
-
-    btnCaptura.addEventListener('click', async () => {
-      reproducirSonidoObturador();
-
-      if (navigator.vibrate) {
-        navigator.vibrate(35);
-      }
-
-      flash.classList.add('disparar-flash');
-      setTimeout(() => flash.classList.remove('disparar-flash'), 90);
-
-      try {
-        const blob = await visor.toBlob({ idealAspect: true });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `comadreja-${Date.now()}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        console.error(err);
+        
+        window.location.href = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_preferred&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
       }
     });
   </script>

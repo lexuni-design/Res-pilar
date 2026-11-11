@@ -38,31 +38,54 @@
       z-index: 10000;
     }
 
-    /* Botón obturador de cámara (estilo disparador circular) */
+    /* Disparador estilo obturador fotográfico */
     #btn-captura {
-      display: none; /* Se activa solo cuando la cámara está funcionando */
+      display: none;
       position: fixed;
       bottom: 35px;
       left: 50%;
       transform: translateX(-50%);
-      width: 70px;
-      height: 70px;
+      width: 74px;
+      height: 74px;
       background-color: #ffffff;
-      border: 5px solid #1b5e20;
+      border: 6px solid #1b5e20;
       border-radius: 50%;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.45);
       cursor: pointer;
       z-index: 10001;
+      outline: none;
     }
 
     #btn-captura:active {
-      transform: translateX(-50%) scale(0.92);
-      background-color: #e0e0e0;
+      transform: translateX(-50%) scale(0.9);
+      background-color: #dcdcdc;
+    }
+
+    /* Efecto visual de flash fotográfico */
+    #flash-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #ffffff;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 20000;
+      transition: opacity 0.08s ease-out;
+    }
+
+    .disparar-flash {
+      opacity: 0.85 !important;
     }
   </style>
 </head>
 <body>
 
+  <!-- Capa del destello de flash -->
+  <div id="flash-overlay"></div>
+
+  <!-- Visor 3D / AR -->
   <model-viewer 
     id="visor-animal"
     src="https://lexuni-design.github.io/Res-pilar/comadreja.glb" 
@@ -74,21 +97,81 @@
     shadow-intensity="1">
   </model-viewer>
 
-  <!-- Botón 1: Iniciar AR -->
+  <!-- Botones -->
   <button id="btn-ar-custom">
     📷 Ver en tu patio
   </button>
 
-  <!-- Botón 2: Disparador de foto -->
-  <button id="btn-captura" title="Sacar foto"></button>
+  <button id="btn-captura" title="Disparar obturador"></button>
 
   <script>
     const visor = document.getElementById('visor-animal');
     const btnAr = document.getElementById('btn-ar-custom');
     const btnCaptura = document.getElementById('btn-captura');
+    const flash = document.getElementById('flash-overlay');
+
+    // Inicializar el contexto de audio
+    let audioCtx = null;
+
+    function reproducirSonidoObturador() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      const tiempo = audioCtx.currentTime;
+
+      // 1. Ruido blanco para emular el golpe mecánico del espejo/cortina
+      const bufferSize = audioCtx.sampleRate * 0.04;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.setValueAtTime(1400, tiempo);
+      noiseFilter.Q.setValueAtTime(3, tiempo);
+
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.8, tiempo);
+      noiseGain.gain.exponentialRampToValueAtTime(0.01, tiempo + 0.04);
+
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noise.start(tiempo);
+
+      // 2. Tono percusivo metálico secundario del clic
+      const osc = audioCtx.createOscillator();
+      const oscGain = audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(320, tiempo);
+      osc.frequency.exponentialRampToValueAtTime(80, tiempo + 0.06);
+
+      oscGain.gain.setValueAtTime(0.6, tiempo);
+      oscGain.gain.exponentialRampToValueAtTime(0.01, tiempo + 0.06);
+
+      osc.connect(oscGain);
+      oscGain.connect(audioCtx.destination);
+      osc.start(tiempo);
+      osc.stop(tiempo + 0.06);
+    }
 
     // 1. Abrir Realidad Aumentada
     btnAr.addEventListener('click', async () => {
+      // Activa el contexto de audio con la primera interacción del usuario
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      
       if (visor.canActivateAR) {
         visor.activateAR();
       } else {
@@ -102,7 +185,7 @@
       }
     });
 
-    // 2. Detectar cuando la sesión de AR WebXR está activa en pantalla
+    // 2. Alternar visibilidad de botones según el estado de AR
     visor.addEventListener('ar-status', (event) => {
       if (event.detail.status === 'session-started') {
         btnAr.style.display = 'none';
@@ -113,20 +196,37 @@
       }
     });
 
-    // 3. Tomar la foto y descargarla
+    // 3. Captura con sonido, destello háptico y descarga
     btnCaptura.addEventListener('click', async () => {
-      // Captura el lienzo actual en formato blob
-      const blob = await visor.toBlob({ idealAspect: true });
-      const url = URL.createObjectURL(blob);
-      
-      // Crea un enlace invisible para descargar la foto automáticamente
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `comadreja-ar-${Date.now()}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Efectos inmediatos al presionar
+      reproducirSonidoObturador();
+
+      // Vibración de cámara en Android (si el dispositivo lo soporta)
+      if (navigator.vibrate) {
+        navigator.vibrate(35);
+      }
+
+      // Animación de flash
+      flash.classList.add('disparar-flash');
+      setTimeout(() => {
+        flash.classList.remove('disparar-flash');
+      }, 90);
+
+      // Captura y descarga del fotograma
+      try {
+        const blob = await visor.toBlob({ idealAspect: true });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `comadreja-ar-${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Error al capturar la imagen:', err);
+      }
     });
   </script>
 

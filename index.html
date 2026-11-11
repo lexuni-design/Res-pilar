@@ -20,7 +20,6 @@
       background-color: #ededed; 
     }
     
-    /* Cartel superior con el título del elemento */
     #cartel-nombre {
       position: fixed;
       top: 20px;
@@ -37,7 +36,20 @@
       white-space: nowrap;
     }
 
-    /* Botón flotante para activar la cámara */
+    #cartel-estado {
+      position: fixed;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      z-index: 1000;
+      display: none;
+    }
+
     #btn-ar-custom {
       position: fixed; 
       bottom: 30px; 
@@ -61,10 +73,9 @@
 </head>
 <body>
 
-  <!-- Nombre dinámico del modelo -->
   <div id="cartel-nombre">Cargando...</div>
+  <div id="cartel-estado">Descargando modelo 3D...</div>
 
-  <!-- Visor 3D / AR -->
   <model-viewer 
     id="visor-modelo"
     ar 
@@ -80,42 +91,56 @@
   </button>
 
   <script>
-    // Catálogo con comadreja y campanario
     const catalogo = {
       "comadreja": {
         nombre: "Comadreja overa",
         glb: "https://lexuni-design.github.io/Res-pilar/comadreja.glb",
-        usdz: "https://lexuni-design.github.io/Res-pilar/comacheta.usdz"
+        usdz: "https://lexuni-design.github.io/Res-pilar/comadreja.usdz"
       },
       "campanario": {
-        nombre: "Campanario histórico",
+        nombre: "Lechuza de campanario",
         glb: "https://lexuni-design.github.io/Res-pilar/campanario.glb",
         usdz: "https://lexuni-design.github.io/Res-pilar/campanario.usdz"
       }
     };
 
-    // Lectura del parámetro en la URL (?objeto=...)
     const params = new URLSearchParams(window.location.search);
     let idSeleccionado = params.get('objeto') || params.get('animal');
 
-    // Por defecto abre comadreja si no se especifica parámetro
     if (!idSeleccionado || !catalogo[idSeleccionado]) {
       idSeleccionado = "comadreja";
     }
 
     const item = catalogo[idSeleccionado];
 
-    // Carga de datos en la interfaz y en model-viewer
     const visor = document.getElementById('visor-modelo');
     const cartel = document.getElementById('cartel-nombre');
+    const estado = document.getElementById('cartel-estado');
     const boton = document.getElementById('btn-ar-custom');
 
     cartel.textContent = item.nombre;
     document.title = `${item.nombre} - Realidad Aumentada`;
+
+    // Mostrar aviso de carga
+    estado.style.display = 'block';
+    estado.textContent = 'Descargando modelo 3D...';
+
     visor.src = item.glb;
     visor.setAttribute('ios-src', item.usdz);
 
-    // Disparador de AR multiplataforma
+    // Eventos para detectar si cargó bien o si falló
+    visor.addEventListener('load', () => {
+      estado.style.display = 'none'; // Cargó con éxito
+    });
+
+    visor.addEventListener('error', (detalle) => {
+      estado.style.display = 'block';
+      estado.style.backgroundColor = '#d32f2f';
+      estado.textContent = 'Error: no se pudo encontrar o cargar el archivo .glb';
+      console.error('Error al cargar GLB:', detalle);
+    });
+
+    // Disparador AR
     boton.addEventListener('click', () => {
       if (visor.canActivateAR) {
         visor.activateAR();

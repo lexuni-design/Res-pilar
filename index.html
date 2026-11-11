@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Animales en Realidad Aumentada</title>
+  <title id="titulo-web">Modelos en Realidad Aumentada</title>
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
   <style>
     body, html { 
@@ -19,6 +19,25 @@
       height: 100%; 
       background-color: #ededed; 
     }
+    
+    /* Cartel superior con el título del elemento */
+    #cartel-nombre {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(255, 255, 255, 0.95);
+      padding: 10px 24px;
+      border-radius: 24px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #1b5e20;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 1000;
+      white-space: nowrap;
+    }
+
+    /* Botón flotante para activar la cámara */
     #btn-ar-custom {
       position: fixed; 
       bottom: 30px; 
@@ -42,10 +61,12 @@
 </head>
 <body>
 
+  <!-- Nombre dinámico del modelo -->
+  <div id="cartel-nombre">Cargando...</div>
+
+  <!-- Visor 3D / AR -->
   <model-viewer 
-    id="visor-animal"
-    src="https://lexuni-design.github.io/Res-pilar/comadreja.glb" 
-    ios-src="https://lexuni-design.github.io/Res-pilar/comacheta.usdz"
+    id="visor-modelo"
     ar 
     ar-modes="webxr scene-viewer quick-look" 
     ar-scale="auto"
@@ -55,35 +76,63 @@
   </model-viewer>
 
   <button id="btn-ar-custom">
-    📷 Ver en tu patio y sacar foto
+    📷 Ver en tu espacio y sacar foto
   </button>
 
   <script>
-    const visor = document.getElementById('visor-animal');
+    // Catálogo con comadreja y campanario
+    const catalogo = {
+      "comadreja": {
+        nombre: "Comadreja overa",
+        glb: "https://lexuni-design.github.io/Res-pilar/comadreja.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/comacheta.usdz"
+      },
+      "campanario": {
+        nombre: "Campanario histórico",
+        glb: "https://lexuni-design.github.io/Res-pilar/campanario.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/campanario.usdz"
+      }
+    };
+
+    // Lectura del parámetro en la URL (?objeto=...)
+    const params = new URLSearchParams(window.location.search);
+    let idSeleccionado = params.get('objeto') || params.get('animal');
+
+    // Por defecto abre comadreja si no se especifica parámetro
+    if (!idSeleccionado || !catalogo[idSeleccionado]) {
+      idSeleccionado = "comadreja";
+    }
+
+    const item = catalogo[idSeleccionado];
+
+    // Carga de datos en la interfaz y en model-viewer
+    const visor = document.getElementById('visor-modelo');
+    const cartel = document.getElementById('cartel-nombre');
     const boton = document.getElementById('btn-ar-custom');
 
+    cartel.textContent = item.nombre;
+    document.title = `${item.nombre} - Realidad Aumentada`;
+    visor.src = item.glb;
+    visor.setAttribute('ios-src', item.usdz);
+
+    // Disparador de AR multiplataforma
     boton.addEventListener('click', () => {
-      // 1. Si model-viewer puede activar AR directamente (funciona en iOS con quick-look si existe ios-src)
       if (visor.canActivateAR) {
         visor.activateAR();
         return;
       }
 
-      // 2. Fallback manual según sistema operativo
       const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
       if (esIOS) {
-        // Enlace nativo directo para AR Quick Look en Safari / iOS
-        const usdzUrl = "https://lexuni-design.github.io/Res-pilar/comacheta.usdz";
         const link = document.createElement('a');
         link.setAttribute('rel', 'ar');
         link.appendChild(document.createElement('img'));
-        link.setAttribute('href', usdzUrl);
+        link.setAttribute('href', item.usdz);
         link.click();
       } else {
-        // Fallback nativo para Android (Scene Viewer)
-        const glbUrl = encodeURIComponent("https://lexuni-design.github.io/Res-pilar/comadreja.glb");
-        const title = encodeURIComponent("Comadreja overa - Reserva del Pilar");
+        const glbUrl = encodeURIComponent(item.glb);
+        const title = encodeURIComponent(item.nombre);
         const fallbackUrl = encodeURIComponent(window.location.href);
         
         window.location.href = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_preferred&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;

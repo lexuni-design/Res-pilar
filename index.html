@@ -14,14 +14,11 @@
     }
   };
 
-  // Leer parámetros de la URL sin importar mayúsculas/minúsculas ni espacios
   const params = new URLSearchParams(window.location.search);
   let rawParam = params.get('objeto') || params.get('animal');
   let idSeleccionado = rawParam ? rawParam.trim().toLowerCase() : null;
 
-  // Si no coincide con nada, recién ahí va comadreja
   if (!idSeleccionado || !catalogo[idSeleccionado]) {
-    console.warn("Parámetro no reconocido o ausente:", rawParam);
     idSeleccionado = "comadreja";
   }
 
@@ -32,15 +29,22 @@
   const estado = document.getElementById('cartel-estado');
   const boton = document.getElementById('btn-ar-custom');
 
-  // Actualizar textos
   cartel.textContent = item.nombre;
   document.title = `${item.nombre} - Realidad Aumentada`;
 
   estado.style.display = 'block';
-  estado.textContent = `Descargando ${item.nombre}...`;
+  estado.textContent = `Descargando ${item.nombre}: 0%`;
 
-  // Asignar el modelo
   visor.src = item.glb;
+
+  // Seguimiento del porcentaje real de descarga
+  visor.addEventListener('progress', (event) => {
+    const porcentaje = Math.round(event.detail.totalProgress * 100);
+    estado.textContent = `Descargando ${item.nombre}: ${porcentaje}%`;
+    if (porcentaje >= 100) {
+      estado.textContent = 'Procesando modelo 3D...';
+    }
+  });
 
   visor.addEventListener('load', () => {
     estado.style.display = 'none';

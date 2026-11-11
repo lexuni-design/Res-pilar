@@ -1,72 +1,95 @@
-<script>
-  const catalogo = {
-    "comadreja": {
-      nombre: "Comadreja overa",
-      glb: "https://lexuni-design.github.io/Res-pilar/comadreja.glb"
-    },
-    "lechu": {
-      nombre: "Lechuza de campanario",
-      glb: "https://lexuni-design.github.io/Res-pilar/lechu.glb"
-    },
-    "lechuza": {
-      nombre: "Lechuza de campanario",
-      glb: "https://lexuni-design.github.io/Res-pilar/lechu.glb"
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Animales en Realidad Aumentada</title>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+  <style>
+    body, html { 
+      margin: 0; 
+      padding: 0; 
+      width: 100%; 
+      height: 100%; 
+      overflow: hidden; 
+      font-family: Arial, sans-serif; 
     }
-  };
-
-  const params = new URLSearchParams(window.location.search);
-  let rawParam = params.get('objeto') || params.get('animal');
-  let idSeleccionado = rawParam ? rawParam.trim().toLowerCase() : null;
-
-  if (!idSeleccionado || !catalogo[idSeleccionado]) {
-    idSeleccionado = "comadreja";
-  }
-
-  const item = catalogo[idSeleccionado];
-
-  const visor = document.getElementById('visor-modelo');
-  const cartel = document.getElementById('cartel-nombre');
-  const estado = document.getElementById('cartel-estado');
-  const boton = document.getElementById('btn-ar-custom');
-
-  cartel.textContent = item.nombre;
-  document.title = `${item.nombre} - Realidad Aumentada`;
-
-  estado.style.display = 'block';
-  estado.textContent = `Descargando ${item.nombre}: 0%`;
-
-  visor.src = item.glb;
-
-  // Seguimiento del porcentaje real de descarga
-  visor.addEventListener('progress', (event) => {
-    const porcentaje = Math.round(event.detail.totalProgress * 100);
-    estado.textContent = `Descargando ${item.nombre}: ${porcentaje}%`;
-    if (porcentaje >= 100) {
-      estado.textContent = 'Procesando modelo 3D...';
+    model-viewer { 
+      width: 100%; 
+      height: 100%; 
+      background-color: #ededed; 
     }
-  });
-
-  visor.addEventListener('load', () => {
-    estado.style.display = 'none';
-  });
-
-  visor.addEventListener('error', (detalle) => {
-    estado.style.display = 'block';
-    estado.style.backgroundColor = '#d32f2f';
-    estado.textContent = `Error: no se pudo cargar ${item.glb.split('/').pop()}`;
-    console.error('Error al cargar GLB:', detalle);
-  });
-
-  boton.addEventListener('click', () => {
-    if (visor.canActivateAR) {
-      visor.activateAR();
-      return;
+    #btn-ar-custom {
+      position: fixed; 
+      bottom: 30px; 
+      left: 50%; 
+      transform: translateX(-50%);
+      padding: 16px 28px; 
+      background-color: #1b5e20; 
+      color: #ffffff; 
+      border: none;
+      border-radius: 30px; 
+      font-size: 16px; 
+      font-weight: bold; 
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+      cursor: pointer;
+      z-index: 10000;
     }
+    #btn-ar-custom:active {
+      background-color: #0d3810;
+    }
+  </style>
+</head>
+<body>
 
-    const glbUrl = encodeURIComponent(item.glb);
-    const title = encodeURIComponent(item.nombre);
-    const fallbackUrl = encodeURIComponent(window.location.href);
-    
-    window.location.href = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_preferred&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
-  });
-</script>
+  <model-viewer 
+    id="visor-animal"
+    src="https://lexuni-design.github.io/Res-pilar/comadreja.glb" 
+    ios-src="https://lexuni-design.github.io/Res-pilar/comadreja.usdz"
+    ar 
+    ar-modes="webxr scene-viewer quick-look" 
+    ar-scale="auto"
+    camera-controls 
+    tone-mapping="neutral" 
+    shadow-intensity="1">
+  </model-viewer>
+
+  <button id="btn-ar-custom">
+    📷 Ver en tu patio y sacar foto
+  </button>
+
+  <script>
+    const visor = document.getElementById('visor-animal');
+    const boton = document.getElementById('btn-ar-custom');
+
+    boton.addEventListener('click', () => {
+      // 1. Si model-viewer puede activar AR directamente (funciona en iOS con quick-look si existe ios-src)
+      if (visor.canActivateAR) {
+        visor.activateAR();
+        return;
+      }
+
+      // 2. Fallback manual según sistema operativo
+      const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+      if (esIOS) {
+        // Enlace nativo directo para AR Quick Look en Safari / iOS
+        const usdzUrl = "https://lexuni-design.github.io/Res-pilar/comadreja.usdz";
+        const link = document.createElement('a');
+        link.setAttribute('rel', 'ar');
+        link.appendChild(document.createElement('img'));
+        link.setAttribute('href', usdzUrl);
+        link.click();
+      } else {
+        // Fallback nativo para Android (Scene Viewer)
+        const glbUrl = encodeURIComponent("https://lexuni-design.github.io/Res-pilar/comadreja.glb");
+        const title = encodeURIComponent("Comadreja overa - Reserva del Pilar");
+        const fallbackUrl = encodeURIComponent(window.location.href);
+        
+        window.location.href = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_preferred&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
+      }
+    });
+  </script>
+
+</body>
+</html>

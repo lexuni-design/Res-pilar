@@ -79,7 +79,7 @@
   <model-viewer 
     id="visor-modelo"
     ar 
-    ar-modes="webxr scene-viewer quick-look" 
+    ar-modes="webxr scene-viewer" 
     ar-scale="auto"
     camera-controls 
     tone-mapping="neutral" 
@@ -91,23 +91,18 @@
   </button>
 
   <script>
-    // Catálogo con comadreja y la lechuza apuntando a lechu.glb
     const catalogo = {
       "comadreja": {
         nombre: "Comadreja overa",
-        glb: "https://lexuni-design.github.io/Res-pilar/comadreja.glb",
-        usdz: "https://lexuni-design.github.io/Res-pilar/comadreja.usdz"
+        glb: "https://lexuni-design.github.io/Res-pilar/comadreja.glb"
+      },
+      "lechu": {
+        nombre: "Lechuza de campanario",
+        glb: "https://lexuni-design.github.io/Res-pilar/lechu.glb"
       },
       "lechuza": {
         nombre: "Lechuza de campanario",
-        glb: "https://lexuni-design.github.io/Res-pilar/lechu.glb",
-        usdz: "https://lexuni-design.github.io/Res-pilar/lechu.usdz"
-      },
-      // Dejamos también 'campanario' como alias por si ya armaste un QR con ese nombre
-      "campanario": {
-        nombre: "Lechuza de campanario",
-        glb: "https://lexuni-design.github.io/Res-pilar/lechu.glb",
-        usdz: "https://lexuni-design.github.io/Res-pilar/lechu.usdz"
+        glb: "https://lexuni-design.github.io/Res-pilar/lechu.glb"
       }
     };
 
@@ -132,7 +127,6 @@
     estado.textContent = 'Descargando modelo 3D...';
 
     visor.src = item.glb;
-    visor.setAttribute('ios-src', item.usdz);
 
     visor.addEventListener('load', () => {
       estado.style.display = 'none';
@@ -141,33 +135,9 @@
     visor.addEventListener('error', (detalle) => {
       estado.style.display = 'block';
       estado.style.backgroundColor = '#d32f2f';
-      estado.textContent = 'Error: no se pudo cargar el archivo lechu.glb';
+      estado.textContent = `Error: no se pudo cargar ${item.glb.split('/').pop()}`;
       console.error('Error al cargar GLB:', detalle);
     });
 
     boton.addEventListener('click', () => {
-      if (visor.canActivateAR) {
-        visor.activateAR();
-        return;
-      }
-
-      const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-      if (esIOS) {
-        const link = document.createElement('a');
-        link.setAttribute('rel', 'ar');
-        link.appendChild(document.createElement('img'));
-        link.setAttribute('href', item.usdz);
-        link.click();
-      } else {
-        const glbUrl = encodeURIComponent(item.glb);
-        const title = encodeURIComponent(item.nombre);
-        const fallbackUrl = encodeURIComponent(window.location.href);
-        
-        window.location.href = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_preferred&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
-      }
-    });
-  </script>
-
-</body>
-</html>
+      if

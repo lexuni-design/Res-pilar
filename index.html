@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Animales en Realidad Aumentada</title>
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
   <style>
@@ -19,41 +19,68 @@
       height: 100%; 
       background-color: #ededed; 
     }
-    .boton-ar {
-      position: absolute; 
+    /* Botón flotante independiente de model-viewer */
+    #btn-ar-custom {
+      position: fixed; 
       bottom: 30px; 
       left: 50%; 
       transform: translateX(-50%);
-      padding: 14px 28px; 
+      padding: 16px 28px; 
       background-color: #1b5e20; 
       color: #ffffff; 
       border: none;
       border-radius: 30px; 
       font-size: 16px; 
       font-weight: bold; 
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35);
       cursor: pointer;
-      z-index: 99999;
-      pointer-events: auto !important;
+      z-index: 10000;
+      display: block;
+    }
+    #btn-ar-custom:active {
+      background-color: #0d3810;
     }
   </style>
 </head>
 <body>
 
+  <!-- Visor 3D -->
   <model-viewer 
+    id="visor-animal"
     src="https://lexuni-design.github.io/Res-pilar/comadreja.glb" 
     ar 
-    ar-modes="scene-viewer webxr quick-look" 
+    ar-modes="webxr scene-viewer quick-look" 
     ar-scale="auto"
     camera-controls 
-    touch-action="pan-y"
     tone-mapping="neutral" 
     shadow-intensity="1">
-    
-    <button slot="ar-button" class="boton-ar">
-      📷 Ver en tu patio y sacar foto
-    </button>
   </model-viewer>
+
+  <!-- Botón exterior -->
+  <button id="btn-ar-custom">
+    📷 Ver en tu patio y sacar foto
+  </button>
+
+  <script>
+    const visor = document.getElementById('visor-animal');
+    const boton = document.getElementById('btn-ar-custom');
+
+    boton.addEventListener('click', async () => {
+      // 1. Intento principal a través del componente
+      if (visor.canActivateAR) {
+        visor.activateAR();
+      } else {
+        // 2. Si el navegador no reporta soporte WebXR, forzamos Scene Viewer nativo directo
+        const glbUrl = encodeURIComponent("https://lexuni-design.github.io/Res-pilar/comadreja.glb");
+        const title = encodeURIComponent("Comadreja");
+        const fallbackUrl = encodeURIComponent(window.location.href);
+        
+        const sceneViewerIntent = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_only&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
+        
+        window.location.href = sceneViewerIntent;
+      }
+    });
+  </script>
 
 </body>
 </html>

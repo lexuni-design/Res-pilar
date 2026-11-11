@@ -2,9 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Animales en Realidad Aumentada</title>
-  <!-- Lector 3D de Google -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
   <style>
     body, html { 
@@ -34,7 +33,8 @@
       font-weight: bold; 
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       cursor: pointer;
-      z-index: 999;
+      z-index: 99999;
+      pointer-events: auto !important;
     }
   </style>
 </head>
@@ -43,9 +43,10 @@
   <model-viewer 
     src="https://lexuni-design.github.io/Res-pilar/comadreja.glb" 
     ar 
-    ar-modes="webxr scene-viewer quick-look" 
+    ar-modes="scene-viewer webxr quick-look" 
     ar-scale="auto"
     camera-controls 
+    touch-action="pan-y"
     tone-mapping="neutral" 
     shadow-intensity="1">
     

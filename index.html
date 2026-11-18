@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Animales en Realidad Aumentada</title>
+  <title id="titulo-web">Fauna en Realidad Aumentada - Reserva del Pilar</title>
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
   <style>
     body, html { 
@@ -19,6 +19,37 @@
       height: 100%; 
       background-color: #ededed; 
     }
+    
+    #cartel-nombre {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(255, 255, 255, 0.95);
+      padding: 10px 24px;
+      border-radius: 24px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #1b5e20;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 1000;
+      white-space: nowrap;
+    }
+
+    #cartel-estado {
+      position: fixed;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.75);
+      color: #ffffff;
+      padding: 6px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      z-index: 1000;
+      display: none;
+    }
+
     #btn-ar-custom {
       position: fixed; 
       bottom: 30px; 
@@ -34,6 +65,7 @@
       box-shadow: 0 4px 14px rgba(0,0,0,0.35);
       cursor: pointer;
       z-index: 10000;
+      white-space: nowrap;
     }
     #btn-ar-custom:active {
       background-color: #0d3810;
@@ -42,12 +74,13 @@
 </head>
 <body>
 
+  <div id="cartel-nombre">Cargando...</div>
+  <div id="cartel-estado">Descargando modelo 3D: 0%</div>
+
   <model-viewer 
-    id="visor-animal"
-    src="https://lexuni-design.github.io/Res-pilar/comadreja.glb" 
-    ios-src="https://lexuni-design.github.io/Res-pilar/comadreja.usdz"
+    id="visor-modelo"
     ar 
-    ar-modes="webxr scene-viewer quick-look" 
+    ar-modes="webxr scene-viewer" 
     ar-scale="auto"
     camera-controls 
     tone-mapping="neutral" 
@@ -55,39 +88,76 @@
   </model-viewer>
 
   <button id="btn-ar-custom">
-    📷 Ver en tu patio y sacar foto
+    📷 Ver en tu espacio y sacar foto
   </button>
 
   <script>
-    const visor = document.getElementById('visor-animal');
+    // Repertorio de animales disponibles
+    const catalogo = {
+      "comadreja": {
+        nombre: "Comadreja overa",
+        glb: "https://lexuni-design.github.io/Res-pilar/comadreja.glb"
+      },
+      "lagarto": {
+        nombre: "Lagarto overo",
+        glb: "https://lexuni-design.github.io/Res-pilar/lagarto.glb"
+      }
+      // Para sumar más, copiá las 4 líneas de arriba, pegalas acá abajo y cambiá clave, nombre y .glb
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    let rawParam = params.get('objeto') || params.get('animal');
+    let idSeleccionado = rawParam ? rawParam.trim().toLowerCase() : null;
+
+    if (!idSeleccionado || !catalogo[idSeleccionado]) {
+      idSeleccionado = "comadreja";
+    }
+
+    const item = catalogo[idSeleccionado];
+
+    const visor = document.getElementById('visor-modelo');
+    const cartel = document.getElementById('cartel-nombre');
+    const estado = document.getElementById('cartel-estado');
     const boton = document.getElementById('btn-ar-custom');
 
+    cartel.textContent = item.nombre;
+    document.title = `${item.nombre} - Reserva del Pilar`;
+
+    estado.style.display = 'block';
+    estado.textContent = `Descargando ${item.nombre}: 0%`;
+
+    visor.src = item.glb;
+
+    visor.addEventListener('progress', (event) => {
+      const porcentaje = Math.round(event.detail.totalProgress * 100);
+      estado.textContent = `Descargando ${item.nombre}: ${porcentaje}%`;
+      if (porcentaje >= 100) {
+        estado.textContent = 'Procesando modelo 3D...';
+      }
+    });
+
+    visor.addEventListener('load', () => {
+      estado.style.display = 'none';
+    });
+
+    visor.addEventListener('error', (detalle) => {
+      estado.style.display = 'block';
+      estado.style.backgroundColor = '#d32f2f';
+      estado.textContent = `Falta subir: ${item.glb.split('/').pop()}`;
+      console.error('Error al cargar GLB:', detalle);
+    });
+
     boton.addEventListener('click', () => {
-      // 1. Si model-viewer puede activar AR directamente (funciona en iOS con quick-look si existe ios-src)
       if (visor.canActivateAR) {
         visor.activateAR();
         return;
       }
 
-      // 2. Fallback manual según sistema operativo
-      const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-      if (esIOS) {
-        // Enlace nativo directo para AR Quick Look en Safari / iOS
-        const usdzUrl = "https://lexuni-design.github.io/Res-pilar/comadreja.usdz";
-        const link = document.createElement('a');
-        link.setAttribute('rel', 'ar');
-        link.appendChild(document.createElement('img'));
-        link.setAttribute('href', usdzUrl);
-        link.click();
-      } else {
-        // Fallback nativo para Android (Scene Viewer)
-        const glbUrl = encodeURIComponent("https://lexuni-design.github.io/Res-pilar/comadreja.glb");
-        const title = encodeURIComponent("Comadreja overa - Reserva del Pilar");
-        const fallbackUrl = encodeURIComponent(window.location.href);
-        
-        window.location.href = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_preferred&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
-      }
+      const glbUrl = encodeURIComponent(item.glb);
+      const title = encodeURIComponent(item.nombre);
+      const fallbackUrl = encodeURIComponent(window.location.href);
+      
+      window.location.href = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_preferred&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
     });
   </script>
 

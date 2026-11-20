@@ -79,10 +79,11 @@
       z-index: 20000;
     }
 
+    /* Botón elevado a 110px del borde inferior para quedar libre sobre el aviso del sistema Android */
     #btn-obturador {
       pointer-events: auto;
       position: fixed;
-      bottom: 36px;
+      bottom: 110px;
       left: 50%;
       transform: translateX(-50%);
       width: 72px;
@@ -115,6 +116,7 @@
       font-weight: bold;
       display: none;
       text-align: center;
+      white-space: nowrap;
     }
   </style>
 </head>
@@ -273,10 +275,8 @@
       }
     });
 
-    // Captura real de la pestaña en vivo (cámara trasera + animal 3D) a formato .JPG
     btnObturador.addEventListener('click', async () => {
       try {
-        // Ocultar el botón para que no salga en la foto
         btnObturador.style.display = 'none';
 
         const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -288,7 +288,6 @@
         video.srcObject = stream;
         await video.play();
 
-        // Esperar un frame limpio
         await new Promise(r => setTimeout(r, 150));
 
         const canvas = document.createElement('canvas');
@@ -297,11 +296,9 @@
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // Detener la captura de inmediato
         stream.getTracks().forEach(track => track.stop());
         btnObturador.style.display = 'flex';
 
-        // Exportar como archivo .JPG real
         canvas.toBlob((blob) => {
           const url = URL.createObjectURL(blob);
           const enlace = document.createElement('a');
@@ -319,7 +316,6 @@
 
       } catch (e) {
         btnObturador.style.display = 'flex';
-        // Respaldo si el navegador bloquea getDisplayMedia en modo inmersivo
         avisoFoto.textContent = 'Sacá captura de pantalla con los botones del teléfono';
         avisoFoto.style.display = 'block';
         setTimeout(() => { avisoFoto.style.display = 'none'; }, 3000);

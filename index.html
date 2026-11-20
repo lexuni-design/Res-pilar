@@ -210,51 +210,34 @@
       console.error('Error al cargar modelo:', detalle);
     });
 
-    boton.addEventListener('click', async () => {
-      // Detección de iPhone / iPad
-      const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-      if (esIOS) {
-        // Verifica si el archivo .usdz existe antes de abrir la cámara
-        estado.style.display = 'block';
-        estado.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-        estado.textContent = `Verificando ${item.usdz.split('/').pop()}...`;
-
-        try {
-          const chequeo = await fetch(item.usdz, { method: 'HEAD' });
-          if (!chequeo.ok) {
-            estado.style.backgroundColor = '#d32f2f';
-            estado.textContent = `Error 404 en iOS: falta ${item.usdz.split('/').pop()}`;
-            return;
-          }
-          estado.style.display = 'none';
-        } catch (err) {
-          estado.style.display = 'none';
-        }
-
-        // Disparador directo de AR Quick Look con escalado táctil habilitado
-        const anchor = document.createElement('a');
-        anchor.setAttribute('rel', 'ar');
-        anchor.appendChild(document.createElement('img'));
-        anchor.setAttribute('href', `${item.usdz}#allowsContentScaling=1`);
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        return;
-      }
-
-      // Flujo para Android (WebXR o Scene Viewer)
+    boton.addEventListener('click', () => {
+      // 1. Intento principal vía model-viewer (activa Quick Look en iOS o WebXR/Scene Viewer en Android)
       if (visor.canActivateAR) {
         visor.activateAR();
         return;
       }
 
-      const glbUrl = encodeURIComponent(item.glb);
-      const title = encodeURIComponent(item.nombre);
-      const fallbackUrl = encodeURIComponent(window.location.href);
-      
-      window.location.href = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_preferred&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
+      // 2. Detección de iPhone / iPad (incluye iPads modernos que reportan MacIntel con pantalla táctil)
+      const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      if (esIOS) {
+        // Disparador directo de AR Quick Look nativo de Apple
+        const anchor = document.createElement('a');
+        anchor.setAttribute('rel', 'ar');
+        anchor.appendChild(document.createElement('img'));
+        anchor.setAttribute('href', item.usdz);
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+      } else {
+        // Disparador directo de Scene Viewer para Android
+        const glbUrl = encodeURIComponent(item.glb);
+        const title = encodeURIComponent(item.nombre);
+        const fallbackUrl = encodeURIComponent(window.location.href);
+        
+        window.location.href = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_preferred&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
+      }
     });
   </script>
 

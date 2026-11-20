@@ -80,7 +80,7 @@
   <model-viewer 
     id="visor-modelo"
     ar 
-    ar-modes="webxr scene-viewer quick-look" 
+    ar-modes="scene-viewer quick-look" 
     ar-scale="auto"
     camera-controls 
     tone-mapping="neutral" 
@@ -88,7 +88,7 @@
   </model-viewer>
 
   <button id="btn-ar-custom">
-    📷 Ver en mi espacio
+    📷 Ver en mi espacio y sacar foto
   </button>
 
   <script>
@@ -211,27 +211,23 @@
     });
 
     boton.addEventListener('click', () => {
-      // 1. Intento principal vía model-viewer (activa Quick Look en iOS o WebXR/Scene Viewer en Android)
-      if (visor.canActivateAR) {
-        visor.activateAR();
-        return;
-      }
-
-      // 2. Detección de iPhone / iPad (incluye iPads modernos que reportan MacIntel con pantalla táctil)
       const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
       if (esIOS) {
-        // Disparador directo de AR Quick Look nativo de Apple
+        if (visor.canActivateAR) {
+          visor.activateAR();
+          return;
+        }
         const anchor = document.createElement('a');
         anchor.setAttribute('rel', 'ar');
         anchor.appendChild(document.createElement('img'));
-        anchor.setAttribute('href', item.usdz);
+        anchor.setAttribute('href', `${item.usdz}#allowsContentScaling=1`);
         document.body.appendChild(anchor);
         anchor.click();
         document.body.removeChild(anchor);
       } else {
-        // Disparador directo de Scene Viewer para Android
+        // Fuerza siempre Scene Viewer con interfaz completa (botón obturador de foto/video de Google)
         const glbUrl = encodeURIComponent(item.glb);
         const title = encodeURIComponent(item.nombre);
         const fallbackUrl = encodeURIComponent(window.location.href);

@@ -80,7 +80,7 @@
   <model-viewer 
     id="visor-modelo"
     ar 
-    ar-modes="webxr scene-viewer" 
+    ar-modes="webxr scene-viewer quick-look" 
     ar-scale="auto"
     camera-controls 
     tone-mapping="neutral" 
@@ -92,65 +92,78 @@
   </button>
 
   <script>
-    // Repertorio de animales disponibles
+    // Repertorio completo de fauna (Android .glb + iOS .usdz)
     const catalogo = {
       "comadreja": {
         nombre: "Comadreja overa",
-        glb: "https://lexuni-design.github.io/Res-pilar/comadreja.glb"
+        glb: "https://lexuni-design.github.io/Res-pilar/comadreja.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/comadreja.usdz"
       },
       "lagarto": {
         nombre: "Lagarto overo",
-        glb: "https://lexuni-design.github.io/Res-pilar/lagarto.glb"
+        glb: "https://lexuni-design.github.io/Res-pilar/lagarto.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/lagarto.usdz"
       },
       "vizcacha": {
         nombre: "Vizcachas",
-        glb: "https://lexuni-design.github.io/Res-pilar/vizcacha.glb"
+        glb: "https://lexuni-design.github.io/Res-pilar/vizcacha.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/vizcacha.usdz"
       },
-       "campanario": {
+      "campanario": {
         nombre: "Lechuza del campanario",
-        glb: "https://lexuni-design.github.io/Res-pilar/campanario.glb"
+        glb: "https://lexuni-design.github.io/Res-pilar/campanario.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/campanario.usdz"
       },
-       "zorro": {
+      "zorro": {
         nombre: "Zorro gris",
-        glb: "https://lexuni-design.github.io/Res-pilar/zorro.glb"
+        glb: "https://lexuni-design.github.io/Res-pilar/zorro.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/zorro.usdz"
       },
-       "arana": {
+      "arana": {
         nombre: "Araña cangrejo",
-        glb: "https://lexuni-design.github.io/Res-pilar/arana.glb"
+        glb: "https://lexuni-design.github.io/Res-pilar/arana.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/arana.usdz"
       },
-       "cardenal": {
+      "cardenal": {
         nombre: "Cardenal",
-        glb: "https://lexuni-design.github.io/Res-pilar/cardenal.glb"
+        glb: "https://lexuni-design.github.io/Res-pilar/cardenal.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/cardenal.usdz"
       },
-       "culebra": {
+      "culebra": {
         nombre: "Culebra",
-        glb: "https://lexuni-design.github.io/Res-pilar/culebra.glb"
-            },
-       "rana": {
+        glb: "https://lexuni-design.github.io/Res-pilar/culebra.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/culebra.usdz"
+      },
+      "rana": {
         nombre: "Rana trepadora enana",
-        glb: "https://lexuni-design.github.io/Res-pilar/rana.glb"
-              },
-       "garza": {
+        glb: "https://lexuni-design.github.io/Res-pilar/rana.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/rana.usdz"
+      },
+      "garza": {
         nombre: "Chiflón",
-        glb: "https://lexuni-design.github.io/Res-pilar/garza.glb"
-        },
-       "martin": {
+        glb: "https://lexuni-design.github.io/Res-pilar/garza.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/garza.usdz"
+      },
+      "martin": {
         nombre: "Martín pescador",
-        glb: "https://lexuni-design.github.io/Res-pilar/martin.glb"
-         },
-       "coipo": {
+        glb: "https://lexuni-design.github.io/Res-pilar/martin.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/martin.usdz"
+      },
+      "coipo": {
         nombre: "Coipo",
-        glb: "https://lexuni-design.github.io/Res-pilar/coipo.glb"
-        },
-       "tortuga": {
+        glb: "https://lexuni-design.github.io/Res-pilar/coipo.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/coipo.usdz"
+      },
+      "tortuga": {
         nombre: "Tortuga cuello de serpiente",
-        glb: "https://lexuni-design.github.io/Res-pilar/tortuga.glb"
-        },
-       "carpintero": {
+        glb: "https://lexuni-design.github.io/Res-pilar/tortuga.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/tortuga.usdz"
+      },
+      "carpintero": {
         nombre: "Pájaro carpintero",
-        glb: "https://lexuni-design.github.io/Res-pilar/carpintero.glb"
-         }
-      // Para sumar más, copiá las 4 líneas de arriba, pegalas acá abajo y cambiá clave, nombre y .glb
+        glb: "https://lexuni-design.github.io/Res-pilar/carpintero.glb",
+        usdz: "https://lexuni-design.github.io/Res-pilar/carpintero.usdz"
+      }
     };
 
     const params = new URLSearchParams(window.location.search);
@@ -174,7 +187,9 @@
     estado.style.display = 'block';
     estado.textContent = `Descargando ${item.nombre}: 0%`;
 
+    // Asignación dual para Android y iOS
     visor.src = item.glb;
+    visor.setAttribute('ios-src', item.usdz);
 
     visor.addEventListener('progress', (event) => {
       const porcentaje = Math.round(event.detail.totalProgress * 100);
@@ -192,20 +207,37 @@
       estado.style.display = 'block';
       estado.style.backgroundColor = '#d32f2f';
       estado.textContent = `Falta subir: ${item.glb.split('/').pop()}`;
-      console.error('Error al cargar GLB:', detalle);
+      console.error('Error al cargar modelo:', detalle);
     });
 
     boton.addEventListener('click', () => {
+      // 1. Intento principal vía model-viewer (activa Quick Look en iOS o WebXR/Scene Viewer en Android)
       if (visor.canActivateAR) {
         visor.activateAR();
         return;
       }
 
-      const glbUrl = encodeURIComponent(item.glb);
-      const title = encodeURIComponent(item.nombre);
-      const fallbackUrl = encodeURIComponent(window.location.href);
-      
-      window.location.href = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_preferred&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
+      // 2. Detección de iPhone / iPad (incluye iPads modernos que reportan MacIntel con pantalla táctil)
+      const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      if (esIOS) {
+        // Disparador directo de AR Quick Look nativo de Apple
+        const anchor = document.createElement('a');
+        anchor.setAttribute('rel', 'ar');
+        anchor.appendChild(document.createElement('img'));
+        anchor.setAttribute('href', item.usdz);
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+      } else {
+        // Disparador directo de Scene Viewer para Android
+        const glbUrl = encodeURIComponent(item.glb);
+        const title = encodeURIComponent(item.nombre);
+        const fallbackUrl = encodeURIComponent(window.location.href);
+        
+        window.location.href = `intent://arvr.google.com/scene-viewer/1.0?file=${glbUrl}&mode=ar_preferred&title=${title}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
+      }
     });
   </script>
 

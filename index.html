@@ -71,7 +71,6 @@
       background-color: #0d3810;
     }
 
-    /* Capa superpuesta visible SOLO cuando se abre la cámara en WebXR */
     #ui-camara-webxr {
       display: none;
       position: fixed;
@@ -115,6 +114,7 @@
       font-size: 14px;
       font-weight: bold;
       display: none;
+      text-align: center;
     }
   </style>
 </head>
@@ -132,9 +132,8 @@
     tone-mapping="neutral" 
     shadow-intensity="1">
 
-    <!-- Interfaz superpuesta dentro de la sesión de cámara WebXR -->
     <div id="ui-camara-webxr">
-      <div id="aviso-foto">¡Foto guardada!</div>
+      <div id="aviso-foto">¡Foto JPG guardada!</div>
       <button id="btn-obturador" title="Tomar foto">📸</button>
     </div>
 
@@ -145,7 +144,6 @@
   </button>
 
   <script>
-    // Repertorio completo de fauna (Android .glb + iOS .usdz)
     const catalogo = {
       "comadreja": {
         nombre: "Comadreja overa",
@@ -243,7 +241,6 @@
     estado.style.display = 'block';
     estado.textContent = `Descargando ${item.nombre}: 0%`;
 
-    // Asignación dual para Android y iOS
     visor.src = item.glb;
     visor.setAttribute('ios-src', item.usdz);
 
@@ -266,7 +263,6 @@
       console.error('Error al cargar modelo:', detalle);
     });
 
-    // Mostrar/ocultar el botón obturador cuando entra o sale de la cámara WebXR
     visor.addEventListener('ar-status', (event) => {
       if (event.detail.status === 'session-started') {
         uiWebXR.style.display = 'block';
@@ -277,34 +273,65 @@
       }
     });
 
-    // Captura y descarga de imagen al tocar el obturador
+    // Captura real de la pestaña en vivo (cámara trasera + animal 3D) a formato .JPG
     btnObturador.addEventListener('click', async () => {
       try {
-        const blob = await visor.toBlob({ idealAspect: true });
-        const url = URL.createObjectURL(blob);
-        const enlace = document.createElement('a');
-        enlace.href = url;
-        enlace.download = `reserva-pilar-${idSeleccionado}.png`;
-        document.body.appendChild(enlace);
-        enlace.click();
-        document.body.removeChild(enlace);
-        URL.revokeObjectURL(url);
+        // Ocultar el botón para que no salga en la foto
+        btnObturador.style.display = 'none';
 
-        avisoFoto.style.display = 'block';
-        setTimeout(() => { avisoFoto.style.display = 'none'; }, 2000);
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { displaySurface: 'browser' },
+          preferCurrentTab: true
+        });
+
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        await video.play();
+
+        // Esperar un frame limpio
+        await new Promise(r => setTimeout(r, 150));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Detener la captura de inmediato
+        stream.getTracks().forEach(track => track.stop());
+        btnObturador.style.display = 'flex';
+
+        // Exportar como archivo .JPG real
+        canvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          const enlace = document.createElement('a');
+          enlace.href = url;
+          enlace.download = `reserva-pilar-${idSeleccionado}.jpg`;
+          document.body.appendChild(enlace);
+          enlace.click();
+          document.body.removeChild(enlace);
+          URL.revokeObjectURL(url);
+
+          avisoFoto.textContent = '¡Foto JPG guardada!';
+          avisoFoto.style.display = 'block';
+          setTimeout(() => { avisoFoto.style.display = 'none'; }, 2500);
+        }, 'image/jpeg', 0.92);
+
       } catch (e) {
-        console.error('No se pudo generar la captura:', e);
+        btnObturador.style.display = 'flex';
+        // Respaldo si el navegador bloquea getDisplayMedia en modo inmersivo
+        avisoFoto.textContent = 'Sacá captura de pantalla con los botones del teléfono';
+        avisoFoto.style.display = 'block';
+        setTimeout(() => { avisoFoto.style.display = 'none'; }, 3000);
       }
     });
 
     boton.addEventListener('click', () => {
-      // 1. Vuelve a priorizar model-viewer (abre WebXR en tu Android sin fallos)
       if (visor.canActivateAR) {
         visor.activateAR();
         return;
       }
 
-      // 2. Respaldo por sistema operativo
       const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 

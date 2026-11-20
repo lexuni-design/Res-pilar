@@ -70,6 +70,52 @@
     #btn-ar-custom:active {
       background-color: #0d3810;
     }
+
+    /* Capa superpuesta visible SOLO cuando se abre la cámara en WebXR */
+    #ui-camara-webxr {
+      display: none;
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 20000;
+    }
+
+    #btn-obturador {
+      pointer-events: auto;
+      position: fixed;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background-color: #ffffff;
+      border: 5px solid rgba(27, 94, 32, 0.9);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.45);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+    #btn-obturador:active {
+      transform: translateX(-50%) scale(0.92);
+      background-color: #e0e0e0;
+    }
+
+    #aviso-foto {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #1b5e20;
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -80,15 +126,22 @@
   <model-viewer 
     id="visor-modelo"
     ar 
-    ar-modes="scene-viewer quick-look" 
+    ar-modes="webxr scene-viewer quick-look" 
     ar-scale="auto"
     camera-controls 
     tone-mapping="neutral" 
     shadow-intensity="1">
+
+    <!-- Interfaz superpuesta dentro de la sesión de cámara WebXR -->
+    <div id="ui-camara-webxr">
+      <div id="aviso-foto">¡Foto guardada!</div>
+      <button id="btn-obturador" title="Tomar foto">📸</button>
+    </div>
+
   </model-viewer>
 
   <button id="btn-ar-custom">
-    📷 Ver en mi espacio y sacar foto
+    📷 Ver en mi espacio
   </button>
 
   <script>
@@ -180,6 +233,9 @@
     const cartel = document.getElementById('cartel-nombre');
     const estado = document.getElementById('cartel-estado');
     const boton = document.getElementById('btn-ar-custom');
+    const uiWebXR = document.getElementById('ui-camara-webxr');
+    const btnObturador = document.getElementById('btn-obturador');
+    const avisoFoto = document.getElementById('aviso-foto');
 
     cartel.textContent = item.nombre;
     document.title = `${item.nombre} - Reserva del Pilar`;
@@ -210,15 +266,49 @@
       console.error('Error al cargar modelo:', detalle);
     });
 
+    // Mostrar/ocultar el botón obturador cuando entra o sale de la cámara WebXR
+    visor.addEventListener('ar-status', (event) => {
+      if (event.detail.status === 'session-started') {
+        uiWebXR.style.display = 'block';
+        boton.style.display = 'none';
+      } else {
+        uiWebXR.style.display = 'none';
+        boton.style.display = 'block';
+      }
+    });
+
+    // Captura y descarga de imagen al tocar el obturador
+    btnObturador.addEventListener('click', async () => {
+      try {
+        const blob = await visor.toBlob({ idealAspect: true });
+        const url = URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = `reserva-pilar-${idSeleccionado}.png`;
+        document.body.appendChild(enlace);
+        enlace.click();
+        document.body.removeChild(enlace);
+        URL.revokeObjectURL(url);
+
+        avisoFoto.style.display = 'block';
+        setTimeout(() => { avisoFoto.style.display = 'none'; }, 2000);
+      } catch (e) {
+        console.error('No se pudo generar la captura:', e);
+      }
+    });
+
     boton.addEventListener('click', () => {
+      // 1. Vuelve a priorizar model-viewer (abre WebXR en tu Android sin fallos)
+      if (visor.canActivateAR) {
+        visor.activateAR();
+        return;
+      }
+
+      // 2. Respaldo por sistema operativo
       const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
       if (esIOS) {
-        if (visor.canActivateAR) {
-          visor.activateAR();
-          return;
-        }
         const anchor = document.createElement('a');
         anchor.setAttribute('rel', 'ar');
         anchor.appendChild(document.createElement('img'));
@@ -227,7 +317,6 @@
         anchor.click();
         document.body.removeChild(anchor);
       } else {
-        // Fuerza siempre Scene Viewer con interfaz completa (botón obturador de foto/video de Google)
         const glbUrl = encodeURIComponent(item.glb);
         const title = encodeURIComponent(item.nombre);
         const fallbackUrl = encodeURIComponent(window.location.href);
